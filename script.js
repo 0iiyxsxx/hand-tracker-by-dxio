@@ -185,6 +185,7 @@ ctx.restore();
 requestAnimationFrame(drawLoop);
 }
 async function startCamera() {
+const errorEl = document.getElementById('error-message');
 try {
 const stream = await navigator.mediaDevices.getUserMedia({
 video: { width: 640, height: 480, facingMode: 'user' }
@@ -192,7 +193,7 @@ video: { width: 640, height: 480, facingMode: 'user' }
 videoElement.srcObject = stream;
 await videoElement.play();
 handsInstance = new Hands({
-locateFile: (file) => https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.3/${file}
+locateFile: (file) => https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}
 });
 handsInstance.setOptions({
 maxNumHands: 1,
@@ -211,16 +212,19 @@ height: 480
 await cameraInstance.start();
 drawLoop();
 } catch (err) {
-const errDiv = document.createElement('div');
-errDiv.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#ff2d55;color:#fff;padding:20px 32px;border-radius:12px;font-size:1.1rem;z-index:9999;';
-errDiv.textContent = 'Camera access denied. Allow permission and refresh.';
-document.getElementById('app').appendChild(errDiv);
+console.error(err);
+errorEl.textContent = err.name === 'NotAllowedError'
+? 'Camera access denied. Please allow permission and refresh the page.'
+: 'Cannot access camera. Make sure you are on HTTPS (GitHub Pages) and try again.';
+errorEl.classList.remove('hidden');
 }
 }
 function resizeCanvas() {
 const canvas = drawingCanvas;
+if (canvas.clientWidth > 0 && canvas.clientHeight > 0) {
 canvas.width = canvas.clientWidth;
 canvas.height = canvas.clientHeight;
+}
 }
 function showModal() {
 const modal = document.getElementById('modal');
@@ -244,7 +248,7 @@ setTimeout(() => {
 app.style.opacity = '1';
 resizeCanvas();
 startCamera();
-}, 50);
+}, 80);
 }, 600);
 });
 drawingCanvas = document.getElementById('drawing-canvas');
@@ -252,7 +256,9 @@ previewCanvas = document.getElementById('preview-canvas');
 previewCtx = previewCanvas.getContext('2d');
 drawingCtx = drawingCanvas.getContext('2d', { alpha: false });
 videoElement = document.getElementById('input-video');
-window.addEventListener('resize', resizeCanvas);
+window.addEventListener('resize', () => {
+if (app.style.display === 'block') resizeCanvas();
+});
 const modal = document.getElementById('modal');
 document.getElementById('modal-cancel').addEventListener('click', hideModal);
 document.getElementById('modal-delete').addEventListener('click', () => {
